@@ -1,0 +1,71 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user of the application (Student, Teacher, or Parent).",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "The user's full name." },
+        "role": { "type": "string", "enum": ["student", "teacher", "parent"], "description": "The user's role." },
+        "email": { "type": "string", "format": "email", "description": "The user's email address." },
+        "class_id": { "type": "string", "description": "The ID of the class (for students and teachers)." },
+        "parent_id": { "type": "string", "description": "The ID of the parent (for students)." }
+      },
+      "required": ["name", "role", "email"]
+    },
+    "Class": {
+      "title": "Class",
+      "description": "A classroom group.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "The name of the class." },
+        "teacher_id": { "type": "string", "description": "The UID of the teacher." }
+      },
+      "required": ["name", "teacher_id"]
+    },
+    "EmotionLog": {
+      "title": "EmotionLog",
+      "description": "A log of a student's emotion and needs.",
+      "type": "object",
+      "properties": {
+        "student_id": { "type": "string", "description": "The UID of the student." },
+        "emotion": { "type": "string", "description": "The selected emotion (emoji + text)." },
+        "reason": { "type": "string", "description": "The selected reason." },
+        "reason_image": { "type": "string", "description": "The URL of the AI-generated image for the reason." },
+        "ai_suggestions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "text": { "type": "string" },
+              "image": { "type": "string" }
+            }
+          },
+          "description": "Suggested coping actions."
+        },
+        "help_requested": { "type": "boolean", "description": "Whether the student asked for help." },
+        "resolved": { "type": "boolean", "description": "Whether the help request is resolved." },
+        "timestamp": { "type": "string", "format": "date-time", "description": "When the log was created." }
+      },
+      "required": ["student_id", "emotion", "timestamp"]
+    },
+    "ClassUpdate": {
+      "title": "ClassUpdate",
+      "description": "A message or update from a teacher to parents.",
+      "type": "object",
+      "properties": {
+        "teacher_id": { "type": "string", "description": "The UID of the teacher." },
+        "class_id": { "type": "string", "description": "The ID of the class." },
+        "message": { "type": "string", "description": "The update message." },
+        "timestamp": { "type": "string", "format": "date-time", "description": "When the update was posted." }
+      },
+      "required": ["teacher_id", "class_id", "message", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": { "schema": "User", "description": "User profiles." },
+    "/classes/{classId}": { "schema": "Class", "description": "Classroom data." },
+    "/emotion_logs/{logId}": { "schema": "EmotionLog", "description": "Student emotion logs." },
+    "/class_updates/{updateId}": { "schema": "ClassUpdate", "description": "Updates for parents." }
+  }
+}
