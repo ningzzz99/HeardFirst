@@ -30,6 +30,7 @@ export interface EmotionLog {
   ai_suggestions: { text: string; prompt: string }[];
   help_requested: boolean;
   resolved: boolean;
+  resolvedAt?: string;
   timestamp: any; // Firestore timestamp
 }
 

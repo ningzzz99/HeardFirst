@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Calendar, FileText, Download, ChevronDown, ChevronUp, Clock, MessageSquare, Loader2, Heart, ArrowLeft } from 'lucide-react';
+import { Calendar, FileText, Download, ChevronDown, ChevronUp, Clock, MessageSquare, Loader2, Heart, ArrowLeft, Send } from 'lucide-react';
 import { db } from '../firebase';
-import { collection, query, where, onSnapshot, orderBy, limit, getDocs } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, orderBy, limit, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { UserProfile, EmotionLog } from '../types';
 import { generateDailySummary } from '../services/geminiService';
@@ -20,6 +20,51 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({ user }) => {
   const [summary, setSummary] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedLog, setExpandedLog] = useState<string | null>(null);
+  const [showTeacherChat, setShowTeacherChat] = useState(false);
+  const [teacherMessages, setTeacherMessages] = useState<any[]>([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [teacherMessages]);
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMessage.trim() || !selectedChild?.class_id) return;
+
+    setSendingMessage(true);
+    try {
+      await addDoc(collection(db, 'parent_messages'), {
+        parent_id: user.uid,
+        child_id: selectedChild.uid,
+        class_id: selectedChild.class_id,
+        message: newMessage.trim(),
+        sender_name: user.name,
+        timestamp: serverTimestamp()
+      });
+      
+      // Also add to class_updates so teacher can see it
+      await addDoc(collection(db, 'class_updates'), {
+        parent_id: user.uid,
+        child_id: selectedChild.uid,
+        class_id: selectedChild.class_id,
+        message: `From ${user.name} (${selectedChild.name}'s parent): ${newMessage.trim()}`,
+        timestamp: serverTimestamp()
+      });
+      
+      setNewMessage('');
+    } catch (error) {
+      console.error('Error sending message:', error);
+    } finally {
+      setSendingMessage(false);
+    }
+  };
 
   useEffect(() => {
     // Find all children (students with parent_id == user.uid)
@@ -66,11 +111,22 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({ user }) => {
         collection(db, 'class_updates'),
         where('class_id', '==', selectedChild.class_id),
         orderBy('timestamp', 'desc'),
-        limit(5)
+        limit(50)
       );
       unsubscribeUpdates = onSnapshot(qUpdates, (snapshot) => {
-        const updates = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const updates = snapshot.docs.map(doc => ({ 
+          id: doc.id, 
+          ...doc.data(),
+          timestamp: doc.data().timestamp?.toDate()
+        })).reverse();
         setClassUpdates(updates);
+        
+        // Filter messages for this parent and child
+        const relevantMessages = updates.filter((msg: any) => 
+          msg.parent_id === user.uid || 
+          (!msg.parent_id && msg.class_id === selectedChild.class_id)
+        );
+        setTeacherMessages(relevantMessages);
       });
     }
 
@@ -177,6 +233,80 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({ user }) => {
           </p>
         </motion.div>
       )}
+
+      {/* Teacher Chat */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white rounded-[40px] border-2 border-[#E5E5E5] shadow-lg overflow-hidden"
+      >
+        <div className="bg-gradient-to-r from-[#4A90E2] to-[#3B82F6] p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <MessageSquare className="w-6 h-6" />
+              <h3 className="text-2xl font-black uppercase tracking-tighter">Chat with Teacher</h3>
+            </div>
+            <div className="text-sm font-bold opacity-90">
+              {selectedChild.name}'s Teacher
+            </div>
+          </div>
+        </div>
+
+        <div className="h-96 flex flex-col">
+          <div className="flex-1 overflow-y-auto p-6 space-y-4">
+            {teacherMessages.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 bg-[#F0FDF4] rounded-full flex items-center justify-center mx-auto mb-4">
+                  <MessageSquare className="w-8 h-8 text-[#10B981]" />
+                </div>
+                <p className="text-[#64748B] font-bold text-lg">No messages yet</p>
+                <p className="text-sm text-[#94A3B8] mt-2">Start a conversation with {selectedChild.name}'s teacher</p>
+              </div>
+            ) : (
+              teacherMessages.map((msg, idx) => (
+                <div key={idx} className={`flex ${msg.parent_id === user.uid ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[80%] p-4 rounded-2xl font-medium ${
+                    msg.parent_id === user.uid
+                      ? 'bg-[#4A90E2] text-white rounded-br-none'
+                      : 'bg-[#F8FAFC] text-[#1E293B] rounded-bl-none border border-[#E5E5E5]'
+                  }`}>
+                    {msg.parent_id === user.uid && (
+                      <div className="text-xs opacity-75 mb-1">You</div>
+                    )}
+                    {!msg.parent_id && (
+                      <div className="text-xs text-[#64748B] mb-1">Teacher</div>
+                    )}
+                    <p>{msg.message}</p>
+                    <p className="text-xs opacity-75 mt-2">
+                      {msg.timestamp ? format(msg.timestamp, 'h:mm a') : 'Just now'}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
+            <div ref={chatEndRef} />
+          </div>
+
+          <div className="p-4 border-t border-[#E5E5E5]">
+            <form onSubmit={handleSendMessage} className="flex gap-3">
+              <input
+                type="text"
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                placeholder="Type your message..."
+                className="flex-1 p-3 bg-[#F8FAFC] rounded-xl border border-[#E5E5E5] font-medium focus:border-[#4A90E2] focus:outline-none"
+              />
+              <button
+                type="submit"
+                disabled={!newMessage.trim() || sendingMessage}
+                className="bg-[#4A90E2] text-white p-3 rounded-xl font-bold shadow-md hover:bg-[#357ABD] disabled:opacity-50 transition-all flex items-center gap-2"
+              >
+                {sendingMessage ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+              </button>
+            </form>
+          </div>
+        </div>
+      </motion.div>
 
       {/* Class Updates */}
       {classUpdates.length > 0 && (

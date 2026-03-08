@@ -206,7 +206,7 @@ export async function generateImage(prompt: string): Promise<string> {
   }).catch(error => {
     console.error("Image generation failed:", error);
     // Return a clean cartoon placeholder image instead of random photography when API rate-limits
-    return `https://raw.githubusercontent.com/ngaio01/bridge/main/placeholder_cartoon.png`;
+    return `https://raw.githubusercontent.com/ngaio01/heardfirst/main/placeholder_cartoon.png`;
   });
 }
 

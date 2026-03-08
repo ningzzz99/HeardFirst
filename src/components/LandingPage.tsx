@@ -200,16 +200,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
 
         {/* Left Side: Branding */}
         <div className="text-center lg:text-left space-y-8 order-2 lg:order-1">
-          <div className="space-y-2">
-            <h1 className="text-7xl md:text-8xl font-black text-[#2C3E50] tracking-tighter leading-none">
-              Bridge<span className="text-[#4A90E2]">Board</span>
-            </h1>
-            <p className="text-3xl md:text-4xl font-medium text-[#4A90E2] tracking-tight leading-tight">
-              Every child has a voice
-            </p>
+          <div className="space-y-8">
+            <div className="flex justify-center">
+              <img src="/logo.png" alt="Heard First Logo" className="w-60 h-60 rounded-3xl shadow-2xl" />
+            </div>
+            <div className="space-y-2">
+              <h1 className="text-7xl md:text-8xl font-black text-[#2C3E50] tracking-tighter leading-none">
+                Heard<span className="text-[#4A90E2]">First</span>
+              </h1>
+              <p className="text-3xl md:text-4xl font-medium text-[#4A90E2] tracking-tight leading-tight">
+                Every child has a voice
+              </p>
+            </div>
           </div>
           <p className="text-2xl text-[#7F8C8D] font-medium leading-[1.6] pt-8 border-t-4 border-[#F0F4F8] max-w-xl mx-auto lg:mx-0">
-            Helps non-verbal and autistic children communicate their emotions and needs in school — bridging students, teachers, and parents.
+            Helps non-verbal and autistic children communicate their emotions and needs in school bridging students, teachers, and parents.
           </p>
         </div>
 

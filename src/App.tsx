@@ -53,7 +53,7 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
 
 export default function App() {
   const [profile, setProfile] = useState<UserProfile | null>(() => {
-    const saved = localStorage.getItem('bridge_user');
+    const saved = localStorage.getItem('heardfirst_user');
     return saved ? JSON.parse(saved) : null;
   });
   const [loading, setLoading] = useState(false);
@@ -65,7 +65,7 @@ export default function App() {
         if (snapshot.exists()) {
           const updatedProfile = { uid: snapshot.id, ...snapshot.data() } as UserProfile;
           setProfile(updatedProfile);
-          localStorage.setItem('bridge_user', JSON.stringify(updatedProfile));
+          localStorage.setItem('heardfirst_user', JSON.stringify(updatedProfile));
         }
       });
       return () => unsubscribe();
@@ -74,22 +74,22 @@ export default function App() {
 
   const handleLogin = (user: UserProfile) => {
     setProfile(user);
-    localStorage.setItem('bridge_user', JSON.stringify(user));
+    localStorage.setItem('heardfirst_user', JSON.stringify(user));
   };
 
   const handleLogout = () => {
     setProfile(null);
-    localStorage.removeItem('bridge_user');
+    localStorage.removeItem('heardfirst_user');
   };
 
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F5F7FA] flex flex-col items-center justify-center">
         <div className="w-24 h-24 bg-white rounded-3xl shadow-xl flex items-center justify-center mb-8 animate-bounce border-2 border-[#E5E5E5]">
-          <div className="w-12 h-12 bg-[#4A90E2] rounded-lg flex items-center justify-center text-white text-3xl font-black">B</div>
+          <img src="/logo.png" alt="Heard First Logo" className="w-16 h-16 rounded-lg" />
         </div>
         <Loader2 className="w-12 h-12 text-[#4A90E2] animate-spin mb-4" />
-        <p className="text-[#7F8C8D] font-black uppercase tracking-widest text-sm">Initializing BridgeBoard...</p>
+        <p className="text-[#7F8C8D] font-black uppercase tracking-widest text-sm">Initializing Heard First...</p>
       </div>
     );
   }

@@ -15,8 +15,8 @@ export const Layout: React.FC<LayoutProps> = ({ children, user, onLogout }) => {
     <div className="min-h-screen bg-[#F5F7FA] font-sans text-[#1A1A1A]">
       <header className="bg-white border-b border-[#E5E5E5] px-6 py-4 flex justify-between items-center sticky top-0 z-50 shadow-sm">
         <div className="flex items-center gap-2">
-          <div className="w-10 h-10 bg-[#4A90E2] rounded-xl flex items-center justify-center text-white font-black text-xl shadow-sm">B</div>
-          <h1 className="text-2xl font-black tracking-tight text-[#2C3E50]">BridgeBoard</h1>
+          <img src="/logo.png" alt="Heard First Logo" className="w-10 h-10 rounded-lg" />
+          <h1 className="text-xl font-bold tracking-tight">Heard First</h1>
         </div>
 
         {user && (

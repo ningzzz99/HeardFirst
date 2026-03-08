@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Users, AlertCircle, CheckCircle2, Clock, ChevronRight, MessageSquare, FileText, Loader2, X, Bell, Menu, Plus, BarChart2, Settings, Home, ArrowLeft, ThumbsUp, Star, MoreHorizontal, Send } from 'lucide-react';
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from 'recharts';
+import { Users, AlertCircle, CheckCircle2, Clock, ChevronRight, MessageSquare, FileText, Loader2, X, Bell, Menu, Plus, BarChart2, Settings, Home, ArrowLeft, ThumbsUp, Star, MoreHorizontal, Send, ChevronDown } from 'lucide-react';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell, LineChart, Line } from 'recharts';
 import { db } from '../firebase';
 import { collection, query, where, onSnapshot, orderBy, updateDoc, doc, getDocs, getDoc, addDoc, serverTimestamp, deleteDoc, setDoc } from 'firebase/firestore';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -30,6 +30,30 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ user }) => {
   const [newStudentName, setNewStudentName] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
   const [addingStudent, setAddingStudent] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showMenuDropdown, setShowMenuDropdown] = useState(false);
+  const [selectedReportStudent, setSelectedReportStudent] = useState<string | null>(null);
+  const [showStudentDropdown, setShowStudentDropdown] = useState(false);
+
+  useEffect(() => {
+    // Close dropdowns when clicking outside
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showMenuDropdown) {
+        setShowMenuDropdown(false);
+      }
+      if (showStudentDropdown) {
+        setShowStudentDropdown(false);
+      }
+    };
+
+    if (showMenuDropdown || showStudentDropdown) {
+      document.addEventListener('click', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [showMenuDropdown, showStudentDropdown]);
 
   useEffect(() => {
     // Fetch class name
@@ -243,7 +267,11 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ user }) => {
   );
 
   const renderReports = () => {
-    const emotionCounts = logs.reduce((acc: any, log) => {
+    const filteredLogs = selectedReportStudent 
+      ? logs.filter(log => log.student_id === selectedReportStudent)
+      : logs;
+
+    const emotionCounts = filteredLogs.reduce((acc: any, log) => {
       const emotion = log.emotion.split(' ')[1];
       acc[emotion] = (acc[emotion] || 0) + 1;
       return acc;
@@ -254,48 +282,229 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ user }) => {
       count: emotionCounts[key]
     }));
 
+    // Create time-series data for individual student
+    const timeSeriesData = selectedReportStudent 
+      ? filteredLogs
+          .sort((a, b) => new Date(a.timestamp?.toDate() || 0).getTime() - new Date(b.timestamp?.toDate() || 0).getTime())
+          .map((log, index) => ({
+            time: format(log.timestamp?.toDate() || new Date(), 'MMM dd'),
+            emotion: log.emotion.split(' ')[1],
+            fullEmotion: log.emotion,
+            reason: log.reason,
+            index: index + 1
+          }))
+      : [];
+
     const COLORS = ['#10B981', '#3B82F6', '#EF4444', '#F59E0B', '#8B5CF6', '#EC4899'];
 
     return (
       <div className="flex flex-col h-full max-w-4xl mx-auto bg-[#F8FAFC] shadow-2xl rounded-[3rem] overflow-hidden border-8 border-white">
         <div className="px-8 pt-10 pb-6 bg-white border-b border-[#F1F5F9]">
-          <h2 className="text-3xl font-black text-[#1E293B] tracking-tight">Class Insights</h2>
-          <p className="text-sm font-bold text-[#64748B] uppercase tracking-widest">Emotion distribution summary</p>
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h2 className="text-3xl font-black text-[#1E293B] tracking-tight">
+                {selectedReportStudent ? 'Individual Insights' : 'Class Insights'}
+              </h2>
+              <p className="text-sm font-bold text-[#64748B] uppercase tracking-widest">
+                {selectedReportStudent ? 'Student emotion tracking over time' : 'Emotion distribution summary'}
+              </p>
+            </div>
+            
+            {/* Student Filter Dropdown */}
+            <div className="relative">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowStudentDropdown(!showStudentDropdown);
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-[#F1F5F9] rounded-xl hover:bg-[#E2E8F0] transition-colors"
+              >
+                <Users className="w-4 h-4" />
+                <span className="text-sm font-bold">
+                  {selectedReportStudent 
+                    ? students.find(s => s.uid === selectedReportStudent)?.name || 'Unknown'
+                    : 'All Students'
+                  }
+                </span>
+                <ChevronDown className={`w-4 h-4 transition-transform ${showStudentDropdown ? 'rotate-180' : ''}`} />
+                {selectedReportStudent && (
+                  <X 
+                    className="w-4 h-4 text-[#EF4444]" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedReportStudent(null);
+                    }}
+                  />
+                )}
+              </button>
+              
+              {showStudentDropdown && (
+                <div className="absolute top-12 right-0 bg-white rounded-xl shadow-lg border border-[#F1F5F9] w-48 z-10">
+                  <div className="p-2 max-h-64 overflow-y-auto">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedReportStudent(null);
+                        setShowStudentDropdown(false);
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-[#F8FAFC] text-sm font-bold flex items-center gap-2"
+                    >
+                      <Users className="w-4 h-4" />
+                      All Students
+                    </button>
+                    {students.map((student) => (
+                      <button
+                        key={student.uid}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedReportStudent(student.uid);
+                          setShowStudentDropdown(false);
+                        }}
+                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-[#F8FAFC] text-sm flex items-center gap-2"
+                      >
+                        <div className="w-6 h-6 bg-[#F1F5F9] rounded-full flex items-center justify-center text-xs">
+                          {student.name.charAt(0).toUpperCase()}
+                        </div>
+                        {student.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-8 space-y-8">
-          <div className="bg-white p-6 rounded-[3rem] shadow-sm border border-[#F1F5F9]">
-            <h3 className="text-xs font-black text-[#94A3B8] uppercase tracking-[0.2em] mb-6 text-center">Emotion Distribution</h3>
-            <div className="h-64 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData}>
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 'bold' }} />
-                  <YAxis hide />
-                  <Tooltip
-                    cursor={{ fill: 'transparent' }}
-                    contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                  />
-                  <Bar dataKey="count" radius={[10, 10, 0, 0]}>
-                    {chartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            {chartData.map((data, idx) => (
-              <div key={data.name} className="bg-white p-5 rounded-[2rem] border border-[#F1F5F9] flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
-                  <span className="text-xs font-black text-[#1E293B] uppercase tracking-wider">{data.name}</span>
+          {selectedReportStudent && timeSeriesData.length > 0 ? (
+            <>
+              {/* Individual Student Timeline Chart */}
+              <div className="bg-white p-6 rounded-[3rem] shadow-sm border border-[#F1F5F9]">
+                <h3 className="text-xs font-black text-[#94A3B8] uppercase tracking-[0.2em] mb-6 text-center">
+                  Emotion Timeline - {students.find(s => s.uid === selectedReportStudent)?.name}
+                </h3>
+                <div className="h-64 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={timeSeriesData}>
+                      <XAxis 
+                        dataKey="time" 
+                        axisLine={false} 
+                        tickLine={false} 
+                        tick={{ fontSize: 10, fontWeight: 'bold' }} 
+                      />
+                      <YAxis hide />
+                      <Tooltip
+                        cursor={{ fill: 'transparent' }}
+                        contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                        content={({ active, payload }) => {
+                          if (active && payload && payload[0]) {
+                            const data = payload[0].payload;
+                            return (
+                              <div className="bg-white p-3 rounded-xl shadow-lg border border-[#F1F5F9]">
+                                <p className="font-bold text-sm">{data.fullEmotion}</p>
+                                <p className="text-xs text-[#64748B]">{data.time}</p>
+                                {data.reason && (
+                                  <p className="text-xs text-[#94A3B8] mt-1 italic">"{data.reason}"</p>
+                                )}
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="index" 
+                        stroke="#3B82F6" 
+                        strokeWidth={3}
+                        dot={{ fill: '#3B82F6', r: 6 }}
+                        activeDot={{ r: 8 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
                 </div>
-                <span className="text-lg font-black text-[#1E293B]">{data.count}</span>
               </div>
-            ))}
-          </div>
+
+              {/* Individual Emotion Distribution */}
+              <div className="bg-white p-6 rounded-[3rem] shadow-sm border border-[#F1F5F9]">
+                <h3 className="text-xs font-black text-[#94A3B8] uppercase tracking-[0.2em] mb-6 text-center">
+                  Emotion Distribution
+                </h3>
+                <div className="h-64 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={chartData}>
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 'bold' }} />
+                      <YAxis hide />
+                      <Tooltip
+                        cursor={{ fill: 'transparent' }}
+                        contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                      />
+                      <Bar dataKey="count" radius={[10, 10, 0, 0]}>
+                        {chartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Recent Emotion Logs */}
+              <div className="space-y-4">
+                <h3 className="text-xs font-black text-[#94A3B8] uppercase tracking-[0.2em] px-2">Recent Emotion Logs</h3>
+                {timeSeriesData.slice(-5).reverse().map((log, index) => (
+                  <div key={index} className="bg-white p-4 rounded-[2rem] shadow-sm border border-[#F1F5F9] flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <span className="text-2xl">{log.fullEmotion.split(' ')[0]}</span>
+                      <div>
+                        <p className="font-black text-[#1E293B]">{log.emotion}</p>
+                        <p className="text-[10px] text-[#94A3B8] font-bold uppercase tracking-wider">{log.time}</p>
+                      </div>
+                    </div>
+                    {log.reason && (
+                      <p className="text-sm text-[#64748B] italic max-w-xs truncate">"{log.reason}"</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Class-wide Emotion Distribution */}
+              <div className="bg-white p-6 rounded-[3rem] shadow-sm border border-[#F1F5F9]">
+                <h3 className="text-xs font-black text-[#94A3B8] uppercase tracking-[0.2em] mb-6 text-center">Emotion Distribution</h3>
+                <div className="h-64 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={chartData}>
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 'bold' }} />
+                      <YAxis hide />
+                      <Tooltip
+                        cursor={{ fill: 'transparent' }}
+                        contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                      />
+                      <Bar dataKey="count" radius={[10, 10, 0, 0]}>
+                        {chartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                {chartData.map((data, idx) => (
+                  <div key={data.name} className="bg-white p-5 rounded-[2rem] border border-[#F1F5F9] flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
+                      <span className="text-xs font-black text-[#1E293B] uppercase tracking-wider">{data.name}</span>
+                    </div>
+                    <span className="text-lg font-black text-[#1E293B]">{data.count}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
         {renderBottomNav()}
       </div>
@@ -458,19 +667,239 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ user }) => {
     );
   };
 
+  const renderMenuDropdown = () => {
+    const teacherTools = [
+      {
+        title: 'Classroom Management',
+        description: 'Tips for managing your classroom effectively',
+        icon: <Users className="w-5 h-5" />,
+        link: 'https://www.edutopia.org/classroom-management',
+        color: 'text-[#3B82F6]'
+      },
+      {
+        title: 'Student Engagement',
+        description: 'Strategies to keep students engaged and motivated',
+        icon: <Star className="w-5 h-5" />,
+        link: 'https://teachingcommons.stanford.edu/teaching-guides/foundations-course-design/learning-activities/increasing-student-engagement',
+        color: 'text-[#10B981]'
+      },
+      {
+        title: 'Special Education Resources',
+        description: 'Resources for teaching students with special needs',
+        icon: <AlertCircle className="w-5 h-5" />,
+        link: 'https://www.understood.org/en',
+        color: 'text-[#F59E0B]'
+      },
+      {
+        title: 'Communication Tips',
+        description: 'Better communication with parents and students',
+        icon: <MessageSquare className="w-5 h-5" />,
+        link: 'https://www.readingrockets.org/topics/parent-engagement/articles/building-parent-teacher-relationships',
+        color: 'text-[#8B5CF6]'
+      },
+      {
+        title: 'Emotional Support',
+        description: 'Helping students manage emotions and stress',
+        icon: <ThumbsUp className="w-5 h-5" />,
+        link: 'https://www.casel.org/',
+        color: 'text-[#EC4899]'
+      },
+      {
+        title: 'Teaching Resources',
+        description: 'Lesson plans and teaching materials',
+        icon: <FileText className="w-5 h-5" />,
+        link: 'https://www.teacherspayteachers.com/',
+        color: 'text-[#EF4444]'
+      }
+    ];
+
+    return (
+      <div className="absolute top-16 left-4 bg-white rounded-2xl shadow-2xl border border-[#F1F5F9] w-80 z-50 overflow-hidden">
+        <div className="p-4 bg-gradient-to-r from-[#3B82F6] to-[#8B5CF6] text-white">
+          <h3 className="font-black text-lg">Teacher Resources</h3>
+          <p className="text-sm opacity-90">Helpful tools and links</p>
+        </div>
+        
+        <div className="max-h-96 overflow-y-auto">
+          {teacherTools.map((tool, index) => (
+            <a
+              key={index}
+              href={tool.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-start gap-3 p-4 hover:bg-[#F8FAFC] transition-colors border-b border-[#F1F5F9] last:border-b-0"
+            >
+              <div className={`p-2 rounded-xl bg-[#F1F5F9] ${tool.color}`}>
+                {tool.icon}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="font-black text-sm text-[#1E293B]">{tool.title}</h4>
+                <p className="text-xs text-[#64748B] mt-1 line-clamp-2">{tool.description}</p>
+              </div>
+              <ChevronRight className="w-4 h-4 text-[#CBD5E1] mt-1 flex-shrink-0" />
+            </a>
+          ))}
+        </div>
+        
+        <div className="p-3 bg-[#F8FAFC] border-t border-[#F1F5F9]">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowMenuDropdown(false);
+            }}
+            className="w-full text-center text-xs font-bold text-[#64748B] hover:text-[#1E293B] transition-colors"
+          >
+            Close Menu
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  const renderNotifications = () => {
+    const helpLogs = logs.filter(l => l.help_requested).sort((a, b) => 
+      new Date(b.timestamp?.toDate() || 0).getTime() - new Date(a.timestamp?.toDate() || 0).getTime()
+    );
+
+    return (
+      <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.9, opacity: 0 }}
+          className="bg-white rounded-[3rem] w-full max-w-2xl max-h-[80vh] overflow-hidden shadow-2xl"
+        >
+          <div className="px-8 pt-8 pb-6 bg-white border-b border-[#F1F5F9] flex justify-between items-center">
+            <div>
+              <h2 className="text-2xl font-black text-[#1E293B] tracking-tight">Help Notifications</h2>
+              <p className="text-sm font-bold text-[#64748B] uppercase tracking-widest">
+                {helpLogs.length} {helpLogs.length === 1 ? 'request' : 'requests'} for assistance
+              </p>
+            </div>
+            <button
+              onClick={() => setShowNotifications(false)}
+              className="p-3 bg-[#F1F5F9] rounded-2xl text-[#64748B] hover:bg-[#E2E8F0] transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4 max-h-[60vh]">
+            {helpLogs.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 bg-[#F0FDF4] rounded-3xl flex items-center justify-center mx-auto mb-4">
+                  <CheckCircle2 className="w-8 h-8 text-[#10B981]" />
+                </div>
+                <p className="text-[#64748B] font-bold">No help requests yet</p>
+                <p className="text-sm text-[#94A3B8] mt-2">Students' help requests will appear here</p>
+              </div>
+            ) : (
+              helpLogs.map((log) => {
+                const student = students.find(s => s.uid === log.student_id);
+                const isResolved = log.resolved;
+                
+                return (
+                  <motion.div
+                    key={log.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`p-6 rounded-[2rem] border-2 transition-all ${
+                      isResolved 
+                        ? 'bg-[#F0FDF4] border-[#DCFCE7]' 
+                        : 'bg-[#FEF2F2] border-[#FECACA]'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-4">
+                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl ${
+                          isResolved ? 'bg-[#DCFCE7]' : 'bg-[#FECACA]'
+                        }`}>
+                          {log.emotion.split(' ')[0]}
+                        </div>
+                        <div>
+                          <p className="font-black text-[#1E293B] text-lg">
+                            {student?.name || 'Unknown Student'}
+                          </p>
+                          <p className={`text-sm font-bold ${
+                            isResolved ? 'text-[#10B981]' : 'text-[#EF4444]'
+                          }`}>
+                            {isResolved ? 'Resolved' : 'Needs Help'} • {log.emotion.split(' ')[1]}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] text-[#94A3B8] font-bold uppercase tracking-wider">
+                          {log.timestamp ? formatDistanceToNow(log.timestamp.toDate()) + ' ago' : 'Just now'}
+                        </p>
+                        {isResolved && log.resolvedAt && (
+                          <p className="text-[10px] text-[#10B981] font-bold uppercase tracking-wider mt-1">
+                            Resolved {formatDistanceToNow(new Date(log.resolvedAt))} ago
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {log.reason && (
+                      <p className="text-[#1E293B] font-medium mb-4 italic">
+                        "{log.reason}"
+                      </p>
+                    )}
+                    
+                    <div className="flex gap-3">
+                      {!isResolved && (
+                        <button
+                          onClick={() => handleResolve(log.id!)}
+                          className="flex-1 bg-[#10B981] text-white p-3 rounded-xl font-black text-sm hover:bg-[#059669] transition-colors flex items-center justify-center gap-2"
+                        >
+                          <CheckCircle2 className="w-4 h-4" />
+                          Mark as Resolved
+                        </button>
+                      )}
+                      <button
+                        onClick={() => {
+                          setSelectedStudent(student);
+                          setShowNotifications(false);
+                        }}
+                        className="flex-1 bg-[#F1F5F9] text-[#1E293B] p-3 rounded-xl font-black text-sm hover:bg-[#E2E8F0] transition-colors"
+                      >
+                        View Details
+                      </button>
+                    </div>
+                  </motion.div>
+                );
+              })
+            )}
+          </div>
+        </motion.div>
+      </div>
+    );
+  };
+
   const renderOverview = () => (
     <div className="flex flex-col h-full max-w-4xl mx-auto bg-[#F8FAFC] shadow-2xl rounded-[3rem] overflow-hidden border-8 border-white">
       {/* Header */}
-      <div className="px-8 pt-10 pb-6 bg-white">
+      <div className="px-8 pt-10 pb-6 bg-white relative">
         <div className="flex justify-between items-center mb-8">
-          <button className="p-3 bg-[#F1F5F9] rounded-2xl text-[#64748B]">
-            <Menu className="w-6 h-6" />
-          </button>
+          <div className="relative">
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowMenuDropdown(!showMenuDropdown);
+              }}
+              className="p-3 bg-[#F1F5F9] rounded-2xl text-[#64748B] hover:bg-[#E2E8F0] transition-colors"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+            {showMenuDropdown && renderMenuDropdown()}
+          </div>
           <div className="text-center">
             <h2 className="text-2xl font-black text-[#1E293B] tracking-tight">{className}</h2>
             <p className="text-sm font-bold text-[#64748B] uppercase tracking-widest">Class</p>
           </div>
-          <button className="p-3 bg-[#F1F5F9] rounded-2xl text-[#64748B] relative">
+          <button 
+            onClick={() => setShowNotifications(true)}
+            className="p-3 bg-[#F1F5F9] rounded-2xl text-[#64748B] relative hover:bg-[#E2E8F0] transition-colors"
+          >
             <Bell className="w-6 h-6" />
             {alertsCount > 0 && <span className="absolute top-2 right-2 w-3 h-3 bg-[#EF4444] rounded-full border-2 border-white" />}
           </button>
@@ -578,6 +1007,8 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ user }) => {
           {renderContent()}
         </motion.div>
       </AnimatePresence>
+      
+      {showNotifications && renderNotifications()}
     </div>
   );
 };
