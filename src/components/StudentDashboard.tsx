@@ -19,6 +19,8 @@ interface StudentDashboardProps {
   user: UserProfile;
 }
 
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user }) => {
   const [step, setStep] = useState<'emotion' | 'reason' | 'action' | 'status' | 'success' | 'others-input' | 'others-refine'>('emotion');
   const [selectedEmotion, setSelectedEmotion] = useState<EmotionOption | null>(null);
@@ -83,7 +85,10 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user }) => {
     setLoading(true);
     setStep('reason');
     try {
-      const texts = await generateReasons(emotion.label);
+      const [texts] = await Promise.all([
+        generateReasons(emotion.label),
+        delay(2000)
+      ]);
       const reasonsWithImages = await Promise.all(
         texts.map(async (text) => ({
           text,
@@ -123,7 +128,10 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user }) => {
     }
 
     try {
-      const texts = await generateActions(selectedEmotion!.label, reason.text);
+      const [texts] = await Promise.all([
+        generateActions(selectedEmotion!.label, reason.text),
+        delay(2000)
+      ]);
       const actionsWithImages = await Promise.all(
         texts.map(async (text) => ({
           text,
@@ -158,7 +166,10 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user }) => {
     setLoading(true);
     setStep('others-refine');
     try {
-      const suggestions = await refineReason(selectedEmotion!.label, othersText);
+      const [suggestions] = await Promise.all([
+        refineReason(selectedEmotion!.label, othersText),
+        delay(2000)
+      ]);
       setRefinedReasons(suggestions);
     } catch (error) {
       console.error('Error refining reason:', error);
