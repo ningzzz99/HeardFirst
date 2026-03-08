@@ -33,7 +33,7 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
             <p className="text-[#7F8C8D] font-medium mb-8 leading-relaxed">
               We've encountered an unexpected error. Don't worry, your data is safe.
             </p>
-            <button 
+            <button
               onClick={() => window.location.reload()}
               className="w-full flex items-center justify-center gap-3 bg-[#4A90E2] text-white p-6 rounded-3xl text-2xl font-black shadow-lg hover:bg-[#357ABD] transition-all active:scale-95"
             >
@@ -89,7 +89,7 @@ export default function App() {
           <div className="w-12 h-12 bg-[#4A90E2] rounded-lg flex items-center justify-center text-white text-3xl font-black">B</div>
         </div>
         <Loader2 className="w-12 h-12 text-[#4A90E2] animate-spin mb-4" />
-        <p className="text-[#7F8C8D] font-black uppercase tracking-widest text-sm">Initializing Bridge...</p>
+        <p className="text-[#7F8C8D] font-black uppercase tracking-widest text-sm">Initializing BridgeBoard...</p>
       </div>
     );
   }

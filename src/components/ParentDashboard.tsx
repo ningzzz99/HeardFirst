@@ -38,7 +38,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({ user }) => {
 
     setLoading(true);
     setSummary(null);
-    
+
     // Fetch logs
     const qLogs = query(collection(db, 'emotion_logs'), where('student_id', '==', selectedChild.uid), orderBy('timestamp', 'desc'));
     const unsubscribeLogs = onSnapshot(qLogs, async (logSnapshot) => {
@@ -53,12 +53,14 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({ user }) => {
         } catch (error) {
           console.error('Error generating summary:', error);
         }
+      } else {
+        setSummary("No activity logged today.");
       }
       setLoading(false);
     });
 
     // Fetch class updates
-    let unsubscribeUpdates = () => {};
+    let unsubscribeUpdates = () => { };
     if (selectedChild.class_id) {
       const qUpdates = query(
         collection(db, 'class_updates'),
@@ -132,7 +134,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({ user }) => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-8 rounded-[40px] border-2 border-[#E5E5E5] shadow-sm">
         <div className="flex items-center gap-6">
-          <button 
+          <button
             onClick={() => setSelectedChild(null)}
             className="p-4 bg-[#F0F4F8] rounded-full hover:bg-[#E5E5E5] transition-colors"
           >
@@ -149,7 +151,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({ user }) => {
             </div>
           </div>
         </div>
-        <button 
+        <button
           onClick={() => window.print()}
           className="flex items-center justify-center gap-2 bg-[#4A90E2] text-white px-8 py-4 rounded-2xl font-black shadow-lg hover:bg-[#357ABD] transition-all active:scale-95"
         >
@@ -160,7 +162,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({ user }) => {
 
       {/* Daily Summary */}
       {summary && (
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="bg-[#EBF4FF] p-8 rounded-[40px] border-2 border-[#4A90E2] shadow-md relative overflow-hidden"
@@ -205,15 +207,15 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({ user }) => {
           <FileText className="w-6 h-6 text-[#7F8C8D]" />
           <h3 className="text-2xl font-black text-[#2C3E50] uppercase tracking-tighter">Activity Log</h3>
         </div>
-        
+
         <div className="space-y-4">
           {logs.map((log) => (
-            <motion.div 
+            <motion.div
               key={log.id}
               layout
               className="bg-white rounded-3xl border-2 border-[#F0F4F8] overflow-hidden shadow-sm hover:border-[#D1D9E6] transition-all"
             >
-              <button 
+              <button
                 onClick={() => setExpandedLog(expandedLog === log.id ? null : log.id!)}
                 className="w-full p-6 flex items-center justify-between text-left"
               >
@@ -239,7 +241,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({ user }) => {
 
               <AnimatePresence>
                 {expandedLog === log.id && (
-                  <motion.div 
+                  <motion.div
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}

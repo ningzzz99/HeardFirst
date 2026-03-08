@@ -110,11 +110,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
         const studentSnapshot = await getDocs(studentQ);
         const studentList = studentSnapshot.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile));
         setStudents(studentList);
-        
+
         // Find already linked children
         const linkedChildren = studentList.filter(s => s.parent_id === userProfile.uid).map(s => s.uid);
         setSelectedChildren(linkedChildren);
-        
+
         setStep('pickChild');
       } else {
         onLogin(userProfile);
@@ -132,9 +132,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
   };
 
   const toggleChild = (studentId: string) => {
-    setSelectedChildren(prev => 
-      prev.includes(studentId) 
-        ? prev.filter(id => id !== studentId) 
+    setSelectedChildren(prev =>
+      prev.includes(studentId)
+        ? prev.filter(id => id !== studentId)
         : [...prev, studentId]
     );
   };
@@ -195,176 +195,204 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
   ];
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[80vh] py-12 px-4 max-w-2xl mx-auto">
-      <AnimatePresence mode="wait">
-        {step === 'role' && (
-          <motion.div 
-            key="role"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="w-full space-y-12"
-          >
-            <div className="text-center">
-              <h2 className="text-5xl font-black text-[#2C3E50] mb-4 tracking-tighter">I am a...</h2>
-              <p className="text-xl text-[#7F8C8D] font-medium">Pick who you are</p>
-            </div>
+    <div className="min-h-[90vh] flex items-center justify-center p-4 md:p-8 lg:p-12">
+      <div className="max-w-7xl w-full grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-24 items-center">
 
-            <div className="space-y-6">
-              {roles.map((role, index) => (
-                <motion.button
-                  key={role.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  onClick={() => handleRoleSelect(role.id)}
-                  className={`w-full flex items-center p-6 rounded-3xl border-2 ${role.borderColor} ${role.color} shadow-lg hover:shadow-xl transition-all group relative overflow-hidden`}
-                >
-                  <div className="bg-white p-4 rounded-2xl shadow-sm mr-6 group-hover:scale-110 transition-transform">
-                    {role.icon}
-                  </div>
-                  <div className="text-left flex-1">
-                    <h3 className={`text-2xl font-bold ${role.textColor}`}>{role.title}</h3>
-                    <p className="text-[#7F8C8D] font-medium">{role.description}</p>
-                  </div>
-                  <ArrowRight className={`w-6 h-6 ${role.textColor} group-hover:translate-x-2 transition-transform`} />
-                </motion.button>
-              ))}
-            </div>
-          </motion.div>
-        )}
+        {/* Left Side: Branding */}
+        <div className="text-center lg:text-left space-y-8 order-2 lg:order-1">
+          <div className="space-y-2">
+            <h1 className="text-7xl md:text-8xl font-black text-[#2C3E50] tracking-tighter leading-none">
+              Bridge<span className="text-[#4A90E2]">Board</span>
+            </h1>
+            <p className="text-3xl md:text-4xl font-medium text-[#4A90E2] tracking-tight leading-tight">
+              Every child has a voice
+            </p>
+          </div>
+          <p className="text-2xl text-[#7F8C8D] font-medium leading-[1.6] pt-8 border-t-4 border-[#F0F4F8] max-w-xl mx-auto lg:mx-0">
+            Helps non-verbal and autistic children communicate their emotions and needs in school — bridging students, teachers, and parents.
+          </p>
+        </div>
 
-        {step === 'name' && (
-          <motion.div 
-            key="name"
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -50 }}
-            className="w-full space-y-8"
-          >
-            <div className="text-center">
-              <button onClick={() => setStep('role')} className="text-[#7F8C8D] font-bold hover:text-[#2C3E50] mb-4 flex items-center justify-center gap-2 mx-auto uppercase tracking-widest text-xs">
-                <ArrowRight className="w-4 h-4 rotate-180" /> Back
-              </button>
-              <h2 className="text-4xl font-black text-[#2C3E50] mb-2 tracking-tighter">What is your name?</h2>
-              <p className="text-[#7F8C8D] font-medium">Type your name below</p>
-            </div>
-
-            <form onSubmit={handleNameSubmit} className="space-y-6">
-              <div className="relative">
-                <input
-                  autoFocus
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. John Doe"
-                  className="w-full p-6 text-2xl font-bold rounded-3xl border-4 border-[#E5E5E5] focus:border-[#4A90E2] outline-none transition-all shadow-inner"
-                />
-              </div>
-
-              {fetchingNames ? (
-                <div className="flex items-center justify-center gap-2 py-4">
-                  <Loader2 className="w-4 h-4 animate-spin text-[#7F8C8D]" />
-                  <p className="text-xs font-bold text-[#7F8C8D] uppercase tracking-widest">Finding names...</p>
-                </div>
-              ) : existingUsers.length > 0 && (
-                <div className="space-y-4">
-                  <p className="text-[#7F8C8D] font-bold text-sm uppercase tracking-widest text-center">Or pick your name</p>
-                  <div className="flex flex-wrap gap-3 justify-center">
-                    {existingUsers.map((user) => (
-                      <button
-                        key={user.uid}
-                        type="button"
-                        onClick={() => handleExistingUserSelect(user)}
-                        className="px-6 py-3 bg-white border-2 border-[#F0F4F8] rounded-2xl font-bold text-[#2C3E50] hover:border-[#4A90E2] hover:bg-[#EBF4FF] transition-all shadow-sm flex items-center gap-2"
-                      >
-                        <User className="w-4 h-4 text-[#7F8C8D]" />
-                        {user.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <button
-                disabled={loading || !name.trim()}
-                type="submit"
-                className="w-full flex items-center justify-center gap-3 bg-[#4A90E2] text-white p-6 rounded-3xl text-2xl font-black shadow-lg hover:bg-[#357ABD] transition-all disabled:opacity-50"
+        {/* Right Side: Interactive Content */}
+        <div className="bg-white/50 backdrop-blur-sm p-2 md:p-8 rounded-[60px] border-4 border-[#F0F4F8] shadow-sm order-1 lg:order-2">
+          <AnimatePresence mode="wait">
+            {step === 'role' && (
+              <motion.div
+                key="role"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 1.05 }}
+                className="w-full space-y-10 py-4"
               >
-                {loading ? <Loader2 className="w-8 h-8 animate-spin" /> : 'CONTINUE'}
-              </button>
-            </form>
-          </motion.div>
-        )}
+                <div className="text-center">
+                  <h2 className="text-4xl font-black text-[#2C3E50] mb-3 tracking-tighter">I am a...</h2>
+                  <p className="text-lg text-[#7F8C8D] font-bold uppercase tracking-widest">Select your role</p>
+                </div>
 
-        {step === 'pickChild' && (
-          <motion.div 
-            key="pickChild"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="w-full space-y-8"
-          >
-            <div className="text-center">
-              <h2 className="text-4xl font-black text-[#2C3E50] mb-2 tracking-tighter">Who are your children?</h2>
-              <p className="text-[#7F8C8D] font-medium">Select your children from the list below</p>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 max-h-[400px] overflow-y-auto p-2">
-              {students.length > 0 ? (
-                students.map((student) => {
-                  const isSelected = selectedChildren.includes(student.uid);
-                  return (
-                    <button
-                      key={student.uid}
-                      onClick={() => toggleChild(student.uid)}
-                      className={`flex items-center p-6 rounded-3xl border-2 transition-all group shadow-sm ${
-                        isSelected 
-                        ? 'border-[#4A90E2] bg-[#EBF4FF]' 
-                        : 'border-[#F0F4F8] bg-white hover:border-[#D1D9E6]'
-                      }`}
+                <div className="space-y-5">
+                  {roles.map((role, index) => (
+                    <motion.button
+                      key={role.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                      onClick={() => handleRoleSelect(role.id)}
+                      className={`w-full flex items-center p-6 rounded-[32px] border-4 transition-all group relative overflow-hidden active:scale-95 ${role.borderColor
+                        } ${role.color} shadow-lg hover:shadow-2xl hover:-translate-y-1`}
                     >
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl mr-4 transition-colors ${
-                        isSelected ? 'bg-white' : 'bg-[#F0F4F8]'
-                      }`}>
-                        👤
+                      <div className="bg-white p-4 rounded-2xl shadow-sm mr-6 group-hover:scale-110 transition-transform">
+                        {role.icon}
                       </div>
-                      <span className={`text-xl font-bold ${isSelected ? 'text-[#4A90E2]' : 'text-[#2C3E50]'}`}>
-                        {student.name}
-                      </span>
-                      <div className={`ml-auto w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${
-                        isSelected ? 'bg-[#4A90E2] border-[#4A90E2]' : 'border-[#D1D9E6]'
-                      }`}>
-                        {isSelected && <Check className="w-5 h-5 text-white" />}
+                      <div className="text-left flex-1">
+                        <h3 className={`text-2xl font-black ${role.textColor}`}>{role.title}</h3>
+                        <p className="text-[#7F8C8D] font-bold text-sm tracking-tight">{role.description}</p>
                       </div>
-                    </button>
-                  );
-                })
-              ) : (
-                <div className="text-center py-12 bg-[#F9FAFB] rounded-3xl border-2 border-dashed border-[#D1D9E6]">
-                  <p className="text-[#7F8C8D] font-medium">No students found in the system yet.</p>
+                      <div className={`p-2 rounded-full bg-white/50 ${role.textColor} group-hover:translate-x-2 transition-transform`}>
+                        <ArrowRight className="w-6 h-6" />
+                      </div>
+                    </motion.button>
+                  ))}
                 </div>
-              )}
-            </div>
+              </motion.div>
+            )}
 
-            <div className="space-y-4">
-              <button
-                disabled={loading}
-                onClick={handleFinishParentLogin}
-                className="w-full flex items-center justify-center gap-3 bg-[#4A90E2] text-white p-6 rounded-3xl text-2xl font-black shadow-lg hover:bg-[#357ABD] transition-all disabled:opacity-50"
+            {step === 'name' && (
+              <motion.div
+                key="name"
+                initial={{ opacity: 0, x: 50 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -50 }}
+                className="w-full space-y-8 py-4"
               >
-                {loading ? <Loader2 className="w-8 h-8 animate-spin" /> : 'DONE'}
-              </button>
-              
-              <button
-                onClick={() => onLogin(currentUser!)}
-                className="w-full p-4 text-[#7F8C8D] font-bold hover:text-[#2C3E50] transition-colors"
+                <div className="text-center">
+                  <button onClick={() => setStep('role')} className="text-[#7F8C8D] font-black hover:text-[#4A90E2] mb-6 flex items-center justify-center gap-2 mx-auto uppercase tracking-widest text-sm transition-colors group">
+                    <ArrowRight className="w-5 h-5 rotate-180 group-hover:-translate-x-1 transition-transform" /> Back to roles
+                  </button>
+                  <h2 className="text-4xl font-black text-[#2C3E50] mb-2 tracking-tighter">Welcome!</h2>
+                  <p className="text-xl text-[#7F8C8D] font-bold">What is your name?</p>
+                </div>
+
+                <form onSubmit={handleNameSubmit} className="space-y-6">
+                  <div className="relative">
+                    <input
+                      autoFocus
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="e.g. Charlie"
+                      className="w-full p-8 text-3xl font-black rounded-[32px] border-4 border-[#F0F4F8] focus:border-[#4A90E2] focus:bg-white outline-none transition-all shadow-inner bg-[#F9FAFB] text-[#2C3E50]"
+                    />
+                  </div>
+
+                  {fetchingNames ? (
+                    <div className="flex items-center justify-center gap-3 py-4">
+                      <Loader2 className="w-6 h-6 animate-spin text-[#4A90E2]" />
+                      <p className="text-sm font-black text-[#7F8C8D] uppercase tracking-widest">Finding profiles...</p>
+                    </div>
+                  ) : existingUsers.length > 0 && (
+                    <div className="space-y-4">
+                      <p className="text-[#7F8C8D] font-black text-xs uppercase tracking-[0.2em] text-center mb-4">Saved Profiles</p>
+                      <div className="flex flex-wrap gap-3 justify-center">
+                        {existingUsers.map((user) => (
+                          <button
+                            key={user.uid}
+                            type="button"
+                            onClick={() => handleExistingUserSelect(user)}
+                            className="px-6 py-4 bg-white border-2 border-[#F0F4F8] rounded-2xl font-black text-[#2C3E50] hover:border-[#4A90E2] hover:bg-[#EBF4FF] transition-all shadow-md flex items-center gap-3"
+                          >
+                            <div className="w-8 h-8 rounded-full bg-[#F0F4F8] flex items-center justify-center text-sm">👤</div>
+                            {user.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <button
+                    disabled={loading || !name.trim()}
+                    type="submit"
+                    className="w-full flex items-center justify-center gap-4 bg-[#4A90E2] text-white p-8 rounded-[32px] text-3xl font-black shadow-xl hover:bg-[#357ABD] transition-all disabled:opacity-50 active:scale-95"
+                  >
+                    {loading ? <Loader2 className="w-10 h-10 animate-spin" /> : (
+                      <>
+                        CONTINUE
+                        <ArrowRight className="w-8 h-8" />
+                      </>
+                    )}
+                  </button>
+                </form>
+              </motion.div>
+            )}
+
+            {step === 'pickChild' && (
+              <motion.div
+                key="pickChild"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="w-full space-y-8 py-4"
               >
-                Skip for now
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+                <div className="text-center">
+                  <h2 className="text-4xl font-black text-[#2C3E50] mb-2 tracking-tighter">Family Link</h2>
+                  <p className="text-[#7F8C8D] font-bold text-lg">Who are your children?</p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 max-h-[400px] overflow-y-auto p-2 pr-4 custom-scrollbar">
+                  {students.length > 0 ? (
+                    students.map((student) => {
+                      const isSelected = selectedChildren.includes(student.uid);
+                      return (
+                        <button
+                          key={student.uid}
+                          onClick={() => toggleChild(student.uid)}
+                          className={`flex items-center p-6 rounded-[28px] border-4 transition-all group shadow-md active:scale-95 ${isSelected
+                            ? 'border-[#4A90E2] bg-[#EBF4FF]'
+                            : 'border-[#F4F6F7] bg-white hover:border-[#D1D9E6]'
+                            }`}
+                        >
+                          <div className={`w-14 h-14 rounded-full flex items-center justify-center text-3xl mr-5 transition-colors ${isSelected ? 'bg-white shadow-inner' : 'bg-[#F4F6F7]'
+                            }`}>
+                            👤
+                          </div>
+                          <span className={`text-2xl font-black ${isSelected ? 'text-[#4A90E2]' : 'text-[#2C3E50]'}`}>
+                            {student.name}
+                          </span>
+                          <div className={`ml-auto w-10 h-10 rounded-full border-4 flex items-center justify-center transition-all ${isSelected ? 'bg-[#4A90E2] border-[#4A90E2]' : 'border-[#D1D9E6]'
+                            }`}>
+                            {isSelected && <Check className="w-6 h-6 text-white" />}
+                          </div>
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <div className="text-center py-16 bg-[#F9FAFB] rounded-[40px] border-4 border-dashed border-[#F0F4F8]">
+                      <p className="text-[#7F8C8D] font-black text-xl mb-2">No students yet!</p>
+                      <p className="text-sm text-[#95A5A6] font-bold">Students must join before you can link them.</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-4 pt-4">
+                  <button
+                    disabled={loading}
+                    onClick={handleFinishParentLogin}
+                    className="w-full flex items-center justify-center gap-4 bg-[#4A90E2] text-white p-8 rounded-[32px] text-3xl font-black shadow-xl hover:bg-[#357ABD] transition-all disabled:opacity-50 active:scale-95"
+                  >
+                    {loading ? <Loader2 className="w-10 h-10 animate-spin" /> : 'SAVE & FINISH'}
+                  </button>
+
+                  <button
+                    onClick={() => onLogin(currentUser!)}
+                    className="w-full p-4 text-[#7F8C8D] font-black hover:text-[#2C3E50] transition-colors text-lg uppercase tracking-widest"
+                  >
+                    Skip for now
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+      </div>
     </div>
   );
 };

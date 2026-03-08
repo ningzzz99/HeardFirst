@@ -23,6 +23,16 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 3, delay = 2000): Pr
   }
 }
 
+const HARDCODED_JOKES = [
+  "What do you call a bear with no teeth? A gummy bear! 🐻🍭",
+  "Why did the mushroom go to the party? Because he was a fun-gi! 🍄🎉",
+  "What do you call a sleeping dinosaur? A dino-snore! 🦖💤",
+  "Why did the student eat his homework? Because the teacher said it was a piece of cake! 🍰📚",
+  "What is orange and sounds like a parrot? A carrot! 🥕🦜",
+  "How do you make a tissue dance? Put a little boogey in it! 💃🤧",
+  "Why was the math book sad? It had too many problems! 📘😢"
+];
+
 const HARDCODED_REASONS: Record<string, string[]> = {
   'HAPPY': [
     'I got a new toy',
@@ -201,13 +211,79 @@ export async function generateImage(prompt: string): Promise<string> {
 }
 
 export async function generateDailySummary(studentName: string, logs: any[]) {
-  const model = "gemini-3-flash-preview";
+  const model = "gemini-2.5-flash";
   const logsText = logs.map(l => `${l.emotion}: ${l.reason}`).join(", ");
   return withRetry(async () => {
-    const response = await ai.models.generateContent({
-      model,
-      contents: `Summarize the day for ${studentName} based on these logs: ${logsText}. The summary is for their parents. Be supportive, clear, and highlight any needs for help. Keep it under 100 words.`,
-    });
-    return response.text;
+    try {
+      const response = await ai.models.generateContent({
+        model,
+        contents: `Summarize the day for ${studentName} based on these logs: ${logsText}. The summary is for their parents. Be supportive, clear, and high-level. Keep it under 50 words. Example style: "Emma had a mostly positive day. She felt overwhelmed once during group activity but felt better after taking a quiet break."`,
+      });
+      return response.text;
+    } catch (error: any) {
+      console.error("Error generating daily summary. Full error:", error);
+      if (error.status) console.error("Status:", error.status);
+      if (error.message) console.error("Message:", error.message);
+      return "Unable to generate summary at this time.";
+    }
+  });
+}
+export async function refineReason(emotion: string, input: string): Promise<string[]> {
+  const model = "gemini-2.5-flash";
+  return withRetry(async () => {
+    try {
+      const response = await ai.models.generateContent({
+        model,
+        contents: `The student feels ${emotion} and said: "${input}". 
+        Suggest 2 short, child-friendly reasons (under 7 words each) that explain why they might feel this way based on their input. 
+        Return ONLY the 2 reasons separated by a pipe character (|).
+        Example: I am hungry | I want a snack`,
+      });
+      const text = response.text || "";
+      return text.split('|').map(s => s.trim()).filter(s => s.length > 0).slice(0, 2);
+    } catch (error: any) {
+      console.error("Error refining reason:", error);
+      return [input, `Feeling ${emotion}`]; // Fallback
+    }
+  });
+}
+
+export async function getChatResponse(history: { role: 'user' | 'model', parts: { text: string }[] }[]): Promise<string> {
+  const model = "gemini-2.5-flash"; // Use working model from other functions
+  return withRetry(async () => {
+    try {
+      const historyText = history.map(h => `${h.role === 'user' ? 'Child' : 'Friend'}: ${h.parts[0].text}`).join("\n");
+
+      const response = await ai.models.generateContent({
+        model,
+        contents: `Role: A supportive, calming companion (Friend) for a child (approx 5-10 yrs old) waiting for their teacher.
+Tone: Playful, encouraging, simple, and very child-friendly.
+Goal: Keep the child calm and distracted. Tell short jokes, stories, or breathing exercises.
+
+CRITICAL INSTRUCTIONS:
+- ONLY output the new response for "Friend".
+- DO NOT repeat the "Child" message.
+- DO NOT repeat previous "Friend" messages from the history.
+- If the child asks for a joke, TELL A NEW JOKE.
+- Keep the response short (15-40 words).
+- Use lots of emojis! 🌈✨🌟
+
+Conversation History:
+${historyText}
+
+Friend:`,
+      });
+
+      const text = response.text || "";
+      console.log("Chat response raw:", text);
+
+      // Basic cleanup in case the model repeats the prefix
+      return text.replace(/^Friend:\s*/i, "").trim() || "I'm right here with you! Your teacher is coming soon. 🌟";
+    } catch (error: any) {
+      console.error("Error getting chat response:", error);
+      // Pick a random joke from fallback list if API fails
+      const randomJoke = HARDCODED_JOKES[Math.floor(Math.random() * HARDCODED_JOKES.length)];
+      return `I'm right here with you! Your teacher is coming soon. 🌟 ${randomJoke}`;
+    }
   });
 }
